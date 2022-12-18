@@ -514,8 +514,10 @@ dependencies = [
 name = "imageshelter-v2"
 version = "0.1.0"
 dependencies = [
+ "rand",
  "rocket",
  "serde",
+ "toml",
 ]
 
 [[package]]
