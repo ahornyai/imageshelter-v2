@@ -1,3 +1,0 @@
-secrets = ["AAAAAAA"]
-allowed_extensions = ["png", "jpg", "jpeg", "bmp", "gif", "txt", "mp4"]
-upload_folder = "uploads"
