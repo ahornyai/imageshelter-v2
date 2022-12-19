@@ -1,5 +1,6 @@
 use rocket::serde::{Serialize, Deserialize};
 use rand::{prelude::*, distributions::Alphanumeric};
+use once_cell::sync::Lazy;
 use toml;
 
 #[derive(Serialize, Deserialize)]
@@ -10,6 +11,7 @@ pub struct Config {
 }
 
 const CONFIG_PATH: &str = "config.toml";
+pub static CONFIG: Lazy<Config> = Lazy::new(|| { load_config() });
 
 pub fn load_config() -> Config {
     let config_file = std::fs::read_to_string(CONFIG_PATH);
