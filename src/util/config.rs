@@ -1,10 +1,11 @@
-use rocket::serde::{Serialize, Deserialize};
+use rocket::{serde::{Serialize, Deserialize}, data::ByteUnit};
 use rand::{prelude::*, distributions::Alphanumeric};
 use once_cell::sync::Lazy;
 use toml;
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
+    pub upload_limit: ByteUnit,
     pub secrets: Vec<String>,
     pub allowed_extensions: Vec<String>,
     pub upload_folder: String,
@@ -22,6 +23,7 @@ pub fn load_config() -> Config {
         
         //default config
         let default_config: Config = Config {
+            upload_limit: ByteUnit::Megabyte(10),
             secrets: [create_secret()].to_vec(),
             allowed_extensions: [
                 String::from("png"),

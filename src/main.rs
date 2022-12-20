@@ -10,8 +10,10 @@ use util::config::CONFIG;
 
 #[launch]
 fn rocket() -> _ {
-    if !Path::new(&CONFIG.upload_folder).exists() {
-        std::fs::create_dir(&CONFIG.upload_folder).expect("Failed to create upload folder");
+    let upload_folder = Path::new(&CONFIG.upload_folder);
+
+    if !upload_folder.exists() {
+        std::fs::create_dir(upload_folder).expect("Failed to create upload folder");
     }
 
     rocket::build().mount("/", routes![upload_file])
