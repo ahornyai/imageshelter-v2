@@ -26,34 +26,27 @@ pub struct UploadRequest {
 impl<'r> FromFormField<'r> for UploadRequest {
 
     async fn from_data(field: DataField<'r, '_>) -> form::Result<'r, Self> {
-        let name = field.file_name;
+        let name = match field.file_name {
+            Some(name) => name.dangerous_unsafe_unsanitized_raw().to_string(),
+            None => return Err(form::Error::validation("Invalid file name"))?
+        };
 
-        if name.is_none() {
-            return Err(form::Error::validation("Invalid file name"))?;
-        }
-
-        let name = name.unwrap().dangerous_unsafe_unsanitized_raw().to_string();
-
-        let extension = Path::new(&name)
+        let extension = match Path::new(&name)
             .extension()
             .and_then(OsStr::to_str)
-            .map(|s| s.to_lowercase());
-        let data = field.data;
+            .map(|s| s.to_lowercase()) {
+                Some(extension) => extension,
+                None => return Err(form::Error::validation("Invalid file extension"))?
+            };
 
         println!("name: {:?}", name);
         println!("extension: {:?}", extension);
-
-        if extension.is_none() {
-            return Err(form::Error::validation("Invalid file extension"))?;
-        }
-
-        let extension = extension.unwrap();
 
         if !CONFIG.allowed_extensions.contains(&extension.to_string()) {
             return Err(form::Error::validation("Not allowed file extension"))?;
         }
 
-        let data = data.open(CONFIG.upload_limit).into_bytes().await?;
+        let data = field.data.open(CONFIG.upload_limit).into_bytes().await?;
 
         if !data.is_complete() {
             return Err(form::Error::validation(format!("File is too large. Upload limit: {}", CONFIG.upload_limit)))?;
