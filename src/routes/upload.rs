@@ -3,13 +3,11 @@ use std::path::Path;
 
 use rand::Rng;
 use rocket::form::{self, FromFormField, DataField, Form};
-use rocket::Either;
-use rocket::http::{Status, RawStr};
+use rocket::http::{RawStr};
 use rocket::serde::json::Json;
 use rocket::serde::{Serialize, Deserialize};
 use crate::util::config::CONFIG;
 use crate::util::encryption::encrypt_with_random_key;
-use crate::util::error::ErrorResponse;
 use crate::util::secret::Secret;
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -60,7 +58,7 @@ impl<'r> FromFormField<'r> for UploadRequest {
 }
 
 #[post("/upload", format = "multipart/form-data", data="<form>")]
-pub async fn upload_file(_secret: Secret, form: Form<UploadRequest>) -> std::io::Result<(Status, Either<Json<UploadResponse>, Json<ErrorResponse>>)> {
+pub async fn upload_file(_secret: Secret, form: Form<UploadRequest>) -> std::io::Result<Json<UploadResponse>> {
     let form = form.into_inner();
     let extension = form.extension;
     let data = form.data;
@@ -78,10 +76,10 @@ pub async fn upload_file(_secret: Secret, form: Form<UploadRequest>) -> std::io:
     std::fs::write(path, output)?;
 
     let key = RawStr::percent_encode(RawStr::new(&key));
-
-    return Ok((Status::Ok, Either::Left(UploadResponse {
+    
+    return Ok(UploadResponse {
         file_name,
         encryption_key: key.to_string()
-    }.into())));
+    }.into());
 }
 
