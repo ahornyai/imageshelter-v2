@@ -1,12 +1,14 @@
 use std::ffi::OsStr;
 use std::path::Path;
 
+use rand::Rng;
 use rocket::form::{self, FromFormField, DataField, Form};
 use rocket::Either;
-use rocket::http::Status;
+use rocket::http::{Status, RawStr};
 use rocket::serde::json::Json;
 use rocket::serde::{Serialize, Deserialize};
 use crate::util::config::CONFIG;
+use crate::util::encryption::encrypt_with_random_key;
 use crate::util::error::ErrorResponse;
 use crate::util::secret::Secret;
 
@@ -33,14 +35,10 @@ impl<'r> FromFormField<'r> for UploadRequest {
 
         let extension = match Path::new(&name)
             .extension()
-            .and_then(OsStr::to_str)
-            .map(|s| s.to_lowercase()) {
-                Some(extension) => extension,
+            .and_then(OsStr::to_str) {
+                Some(extension) => extension.to_lowercase(),
                 None => return Err(form::Error::validation("Invalid file extension"))?
             };
-
-        println!("name: {:?}", name);
-        println!("extension: {:?}", extension);
 
         if !CONFIG.allowed_extensions.contains(&extension.to_string()) {
             return Err(form::Error::validation("Not allowed file extension"))?;
@@ -66,10 +64,24 @@ pub async fn upload_file(_secret: Secret, form: Form<UploadRequest>) -> std::io:
     let form = form.into_inner();
     let extension = form.extension;
     let data = form.data;
-    
+
+    let (key, output) = encrypt_with_random_key(data);
+
+    let file_name = rand::thread_rng()
+        .sample_iter(&rand::distributions::Alphanumeric)
+        .take(8)
+        .map(char::from)
+        .collect::<String>();
+    let file_name = format!("{}.{}", file_name, extension);
+    let path = Path::new(&CONFIG.upload_folder).join(&file_name);
+
+    std::fs::write(path, output)?;
+
+    let key = RawStr::percent_encode(RawStr::new(&key));
+
     return Ok((Status::Ok, Either::Left(UploadResponse {
-        file_name: "test".to_string(),
-        encryption_key: "test".to_string()
+        file_name,
+        encryption_key: key.to_string()
     }.into())));
 }
 

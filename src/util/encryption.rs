@@ -1,16 +1,22 @@
 use aes_gcm::{
-    aead::{AeadInPlace, KeyInit, OsRng},
-    Aes256Gcm, Key, Nonce,
+    aead::{KeyInit, Aead},
+    Aes256Gcm, Nonce,
 };
+use sha2::Digest;
 
-pub fn encrypt_with_random_key(mut buffer: Vec<u8>) -> (Key<Aes256Gcm>, Vec<u8>) {
-    let key = Aes256Gcm::generate_key(&mut OsRng);
-    let cipher = Aes256Gcm::new(&key);
-    let nonce = Nonce::from_slice(b"unique nonce"); // 96-bits; unique per message
+pub fn encrypt_with_random_key(buffer: Vec<u8>) -> (String, Vec<u8>) {
+    let raw_key = rand::random::<i32>();
+    let sha_key = sha2::Sha256::digest(&raw_key.to_be_bytes()).to_vec();
+    let key = Aes256Gcm::new_from_slice(sha_key.as_ref()).unwrap();
+    let nonce = rand::random::<[u8; 12]>();
+    let nonce = Nonce::from_slice(nonce.as_ref());
 
-    cipher
-        .encrypt_in_place_detached(nonce, b"imageshelter-v2", &mut buffer)
+    let output = key
+        .encrypt(nonce, buffer.as_ref())
         .unwrap();
 
-    (key, buffer)
+    let mut key_with_nonce = nonce.to_vec();
+    key_with_nonce.append(&mut raw_key.to_be_bytes().to_vec());
+
+    (bs58::encode(&key_with_nonce).into_string(), output)
 }
