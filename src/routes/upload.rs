@@ -2,8 +2,7 @@ use std::ffi::OsStr;
 use std::path::Path;
 
 use rand::Rng;
-use rocket::form::{self, FromFormField, DataField, Form};
-use rocket::http::{RawStr};
+use rocket::form::{Result, FromFormField, DataField, Form, Error};
 use rocket::serde::json::Json;
 use rocket::serde::{Serialize, Deserialize};
 use crate::util::config::CONFIG;
@@ -25,27 +24,27 @@ pub struct UploadRequest {
 #[rocket::async_trait]
 impl<'r> FromFormField<'r> for UploadRequest {
 
-    async fn from_data(field: DataField<'r, '_>) -> form::Result<'r, Self> {
+    async fn from_data(field: DataField<'r, '_>) -> Result<'r, Self> {
         let name = match field.file_name {
             Some(name) => name.dangerous_unsafe_unsanitized_raw().to_string(),
-            None => return Err(form::Error::validation("Invalid file name"))?
+            None => return Err(Error::validation("Invalid file name"))?
         };
 
         let extension = match Path::new(&name)
             .extension()
             .and_then(OsStr::to_str) {
                 Some(extension) => extension.to_lowercase(),
-                None => return Err(form::Error::validation("Invalid file extension"))?
+                None => return Err(Error::validation("Invalid file extension"))?
             };
 
         if !CONFIG.allowed_extensions.contains(&extension.to_string()) {
-            return Err(form::Error::validation("Not allowed file extension"))?;
+            return Err(Error::validation("Not allowed file extension"))?;
         }
 
         let data = field.data.open(CONFIG.upload_limit).into_bytes().await?;
 
         if !data.is_complete() {
-            return Err(form::Error::validation(format!("File is too large. Upload limit: {}", CONFIG.upload_limit)))?;
+            return Err(Error::validation(format!("File is too large. Upload limit: {}", CONFIG.upload_limit)))?;
         }
 
         let data = data.into_inner();
@@ -63,7 +62,7 @@ pub async fn upload_file(_secret: Secret, form: Form<UploadRequest>) -> std::io:
     let extension = form.extension;
     let data = form.data;
 
-    let (key, output) = encrypt_with_random_key(data);
+    let (encryption_key, output) = encrypt_with_random_key(data);
 
     let file_name = rand::thread_rng()
         .sample_iter(&rand::distributions::Alphanumeric)
@@ -74,12 +73,10 @@ pub async fn upload_file(_secret: Secret, form: Form<UploadRequest>) -> std::io:
     let path = Path::new(&CONFIG.upload_folder).join(&file_name);
 
     std::fs::write(path, output)?;
-
-    let key = RawStr::percent_encode(RawStr::new(&key));
     
     return Ok(UploadResponse {
         file_name,
-        encryption_key: key.to_string()
+        encryption_key
     }.into());
 }
 

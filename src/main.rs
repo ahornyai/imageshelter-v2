@@ -6,6 +6,7 @@ mod util;
 use std::path::Path;
 
 use routes::upload::upload_file;
+use routes::show::show_file;
 use util::config::CONFIG;
 
 #[launch]
@@ -16,5 +17,5 @@ fn rocket() -> _ {
         std::fs::create_dir(upload_folder).expect("Failed to create upload folder");
     }
 
-    rocket::build().mount("/", routes![upload_file])
+    rocket::build().mount("/", routes![upload_file, show_file])
 }
