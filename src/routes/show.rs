@@ -10,9 +10,6 @@ pub async fn show_file(file_name: &str, key: &str) -> (ContentType, Result<Vec<u
         return (ContentType::JSON, Err(ApiError::new("Invalid file name", Status::BadRequest)));
     }
 
-    println!("file_name: {}", file_name);
-    println!("key: {}", key);
-
     let path = Path::new(&CONFIG.upload_folder).join(&file_name);
     let file = File::open(path).await;
 
