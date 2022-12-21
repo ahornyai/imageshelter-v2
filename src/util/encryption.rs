@@ -1,5 +1,3 @@
-use std::fmt::Error;
-
 use aes_gcm::{
     aead::{KeyInit, Aead},
     Aes256Gcm, Nonce,
