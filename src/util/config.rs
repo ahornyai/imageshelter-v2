@@ -48,7 +48,7 @@ pub fn load_config() -> Config {
 }
 
 pub fn create_secret() -> String {
-    return rand::thread_rng()
+    return rand::rngs::StdRng::from_entropy()
         .sample_iter(&Alphanumeric)
         .take(32)
         .map(char::from)
